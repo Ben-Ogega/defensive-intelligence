@@ -33,4 +33,4 @@ Anomaly Detection on Kenyan Road Networks"
 - [ ] Week 6 — Conference preparation
 
 ## Stack
-Python | NumPy | PyTorch | HuggingFace | Jupyter
+Python | NumPy | PyTorch | HuggingFace | Jupyter | LaTeX
