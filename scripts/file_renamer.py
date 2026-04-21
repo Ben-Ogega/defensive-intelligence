@@ -9,7 +9,7 @@ import shutil
 # ======================================================
 
 '''
-  ----- Beyond the Label -----
+  ---- More than a label or a string of text, ----
 More than a label or a string of text,
 A file is defined by the life in its name;
 A beacon that signals what follows it next,
