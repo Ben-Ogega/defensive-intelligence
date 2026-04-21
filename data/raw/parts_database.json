@@ -1,1 +1,141 @@
-﻿
+﻿{    "716003": {
+        "description": "Pressure Sensor",
+        "oem": "Konecranes",
+        "status": "DISCONTINUED",
+        "oem_replacement": "6091.003",
+        "applications": [
+            "Konecranes Industrial Cranes"
+        ],
+        "equivalents": [
+            {
+                "manufacturer": "Danfoss",
+                "part_number": "MBS 3000",
+                "notes": "Standard version"
+            },
+            {
+                "manufacturer": "Danfoss",
+                "part_number": "MBS 3050",
+                "notes": "Heavy duty with internal snubber"
+            }
+        ],
+        "specs": {
+            "pressure_range": "0-115 Bar (Gauge)",
+            "output": "4-20 mA",
+            "electrical_connection": "M12 x 1, 4-pin (3-pin wired)",
+            "pressure_connection": "G 1/4 A"
+        }
+    },
+    "LG45021": {
+        "description": "Hydraulic Control Valve",
+        "oem": "LiuGong",
+        "status": "DISCONTINUED",
+        "oem_replacement": "LG45022B",
+        "applications": [
+            "LiuGong 856H Wheel Loader",
+            "LiuGong 835H Wheel Loader"
+        ],
+        "equivalents": [
+            {
+                "manufacturer": "Bosch Rexroth",
+                "part_number": "R902401111",
+                "notes": "Direct hydraulic equivalent"
+            },
+            {
+                "manufacturer": "Parker",
+                "part_number": "D1VW004CNJPF",
+                "notes": "Compatible with 207 Bar systems"
+            }
+        ],
+        "specs": {
+            "type": "Directional Control Valve",
+            "pressure_max": "207 Bar",
+            "flow_rate": "45 L/min",
+            "connection": "G 3/8"
+        }
+    },
+    "DR8802X": {
+        "description": "Transmission Speed Sensor",
+        "oem": "Dresser",
+        "status": "DISCONTINUED",
+        "oem_replacement": "DR8803Z",
+        "applications": [
+            "Dresser 140M Grader",
+            "Dresser 512 Loader"
+        ],
+        "equivalents": [
+            {
+                "manufacturer": "Honeywell",
+                "part_number": "1GT101DC12",
+                "notes": "Hall effect sensor — direct fit"
+            },
+            {
+                "manufacturer": "Delphi",
+                "part_number": "SS10228",
+                "notes": "Compatible with ZF transmission"
+            }
+        ],
+        "specs": {
+            "type": "Hall Effect Speed Sensor",
+            "voltage": "5-24V DC",
+            "output": "Square wave — 10mA",
+            "connector": "2-pin Deutsch DT"
+        }
+    },
+    "BL7734K": {
+        "description": "Articulation Joint Bearing",
+        "oem": "Bell Equipment",
+        "status": "OBSOLETE",
+        "oem_replacement": "BL7734KX",
+        "applications": [
+            "Bell B25D ADT",
+            "Bell B30D ADT"
+        ],
+        "equivalents": [
+            {
+                "manufacturer": "SKF",
+                "part_number": "GEH110TXE-2LS",
+                "notes": "Spherical plain bearing — greaseable"
+            },
+            {
+                "manufacturer": "FAG",
+                "part_number": "GE110-DO-2RS",
+                "notes": "Sealed version — longer service life"
+            }
+        ],
+        "specs": {
+            "type": "Spherical Plain Bearing",
+            "inner_diameter_mm": "110",
+            "outer_diameter_mm": "160",
+            "width_mm": "70",
+            "load_rating_kN": "560"
+        }
+    },
+    "MC2201F": {
+        "description": "Swing Motor Seal Kit",
+        "oem": "Manitowoc",
+        "status": "DISCONTINUED",
+        "oem_replacement": "MC2201FX",
+        "applications": [
+            "Manitowoc 2250 Crawler Crane",
+            "Manitowoc 3900 Crawler Crane"
+        ],
+        "equivalents": [
+            {
+                "manufacturer": "Parker",
+                "part_number": "SK-MS-2201",
+                "notes": "Full seal kit — Viton seals"
+            },
+            {
+                "manufacturer": "Hallite",
+                "part_number": "HL-2201-KIT",
+                "notes": "Heavy duty polyurethane seals"
+            }
+        ],
+        "specs": {
+            "type": "Hydraulic Motor Seal Kit",
+            "material": "Nitrile NBR standard",
+            "pressure_max": "350 Bar",
+            "temperature_range": "-20C to +100C"
+        }
+    }
+}
