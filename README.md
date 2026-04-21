@@ -32,5 +32,10 @@ Anomaly Detection on Kenyan Road Networks"
 - [ ] Week 5 — Paper writing
 - [ ] Week 6 — Conference preparation
 
+## License
+© 2026 Ben Ogega. All rights reserved.
+Safari-Safe-AI and the BRIDGE Framework are original 
+works by the author. Please contact before reuse.
+
 ## Stack
 Python | NumPy | PyTorch | HuggingFace | Jupyter | LaTeX
