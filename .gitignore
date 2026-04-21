@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.env
+venv/
+.idea/  
+.DS_Store
+*.log
+*.ipynb_checkpoints/
+# Ignore Jupyter Notebook checkpoints
+data/raw/*.csv
+data/processed/*.csv
+# Ignore raw and processed data files
+models/*.pkl *.pt *.pth
+# Ignore model files    
+Thumbs.db
+# Ignore Windows thumbnail cache files
+*.env
+# Ignore environment variable files
+secrets.py  
