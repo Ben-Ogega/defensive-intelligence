@@ -1,4 +1,6 @@
-﻿import json
+
+
+import json
 import os
 
 # ===============================================
@@ -23,7 +25,7 @@ import os
         On every part you can rely,
         Across the heavy-duty land.
 """
-
+# print("Script starting...")
 # Step 1: Load parts data from JSON file/database
 def load_database(db_path):
     if not os.path.exists(db_path): # why check if file exists before trying to load it?
@@ -36,7 +38,7 @@ def load_database(db_path):
     # and it provides a clear indication that the database is empty rather than missing. 
     # This way, the program can handle the situation gracefully and avoid potential errors down the line when trying to access parts data.
     try:
-        with open(db_path, 'r') as file:
+        with open(db_path, 'r', encoding='utf-8-sig') as file:
             parts_data = json.load(file)
             return parts_data
     except json.JSONDecodeError as e:
@@ -112,28 +114,49 @@ def display_part(part_number, part_info):
     
     print("="*55)
 
-# Step 4: Main function to run the parts lookup
+# Step 4 — Main entry point
 def main():
-    # Use environment variable or relative pathing
-    path =  "C:\\Users\\User\\Desktop\\Logos\\TransformerRoadMap\\defensive-intelligence\\data\\raw\\parts_database.json"
-    database = load_database(path)
+    # Build path relative to project root
+    BASE_DIR = os.path.dirname(
+                   os.path.dirname(
+                       os.path.abspath(__file__)
+                   )
+               )
+    db_path = os.path.join(
+                  BASE_DIR, 'data', 'raw', 'parts_database.json'
+              )
 
+    # Load database
+    database = load_database(db_path)
     if not database:
         return
 
-    print("🏗️  Parts Bridge Initialized. Type 'exit' to quit.")
-    
+    # Welcome
+    print("\n" + "="*55)
+    print("   Welcome to PartsBridge")
+    print("   Heavy Equipment Cross-Referencer")
+    print("   East Africa | Ben Ogega | BRIDGE Framework")
+    print("="*55)
+    print("   Type a part number to search.")
+    print("   Type 'exit' to quit.")
+
+    # Main loop
     while True:
         query = input("\nEnter part number: ").strip()
+
         if query.lower() == 'exit':
+            print("\nPartsBridge closed. Keep the machines running.\n")
             break
-        
+
+        if not query:
+            print("Please enter a part number.")
+            continue
+
         result = find_part(query, database)
+
         if result:
-            # Assume display_part is defined elsewhere
-            print(f"✅ Found: {result}")
-        else:
-            print(f"⚠️ Part '{query}' not found.")
+            display_part(query.strip().upper(), result)
 
 if __name__ == "__main__":
     main()
+
