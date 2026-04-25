@@ -1,275 +1,499 @@
 ﻿# -*- coding: utf-8 -*-
 
 import numpy as np
+import logging
+from typing import Dict, List, Union
+from dataclasses import dataclass, asdict
 
 # ============================================
 # Safari-Safe-AI | Physics-First Anomaly Flags
 # Author: Ben Ogega | BRIDGE Framework
-# Phase 2 — Encoding defensive driving knowledge
-# AA Kenya | FIA Affiliate | 15+ years experience
+# Refined for Production & Forensic Safety
 # ============================================
 
-"""
-Every flag in this file represents a dangerous
-driving behaviour observed and taught by the author
-during 2 years of defensive driving instruction
-at the Automobile Association of Kenya.
+# Configure logging to capture safety events to a file
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='safari_safe_audit.log'
+)
 
-This is not guesswork. This is domain knowledge
-encoded into mathematics.
-"""
+@dataclass(frozen=True)
+class SafetyFlag:
+    """Standardized output for all driving anomaly detectors.
+    
+    Attributes:
+        flag: True if a safety violation was detected.
+        type: The category of the flag (e.g., FLAG_OVERSPEED).
+        severity: NONE, WARNING, DANGER, or CRITICAL.
+        message: Human-readable explanation of the event.
+        meta_data: Raw physics values for telemetry logging.
+    """
+    flag: bool
+    type: str
+    severity: str
+    message: str
+    meta_data: Dict[str, Union[float, int, bool, str]]
 
-# ============================================
-# THRESHOLDS — Physics-based limits
-# Grounded in Kenyan road speed limits and
-# defensive driving standards
-# ============================================
-
+# Thresholds grounded in Kenyan Traffic Act
 THRESHOLDS = {
-    'speed_highway_kmh':     110.0,   # Kenya highway limit
-    'speed_urban_kmh':        50.0,   # Kenya urban limit
-    'speed_school_zone_kmh':  30.0,   # School zone limit
-    'brake_spike':             7.0,   # Brake pressure danger threshold
-    'steering_still':          0.3,   # Max variance for distraction flag
-    'steering_overcorrect':   25.0,   # Sudden steering angle degrees
-    'decel_harsh':             3.5,   # m/s^2 — harsh braking threshold
-    'tailgate_cycles':         3,     # Brake cycles in short window
-    'distraction_time_s':      5.0,   # Seconds of eyes off road
+    'speed_highway_kmh':     110.0,
+    'speed_urban_kmh':        50.0,
+    'speed_school_zone_kmh':  30.0,
+    'brake_spike':             7.0,
+    'steering_still':          0.3,
+    'steering_overcorrect':   25.0,
+    'decel_harsh':             3.5,
 }
 
-
 # ============================================
-# FLAG 1 — OVERSPEED
-# One function. One job.
-# Detects vehicle exceeding safe speed limits
-# Source: Kenya Traffic Act + AA Kenya training
+# SAFETY ENGINE FUNCTIONS
 # ============================================
 
-def flag_overspeed(speed_kmh, zone='highway'):
+def flag_overspeed(speed_kmh: float, zone: str = 'highway') -> Dict:
+    """Detects vehicle overspeeding relative to Kenyan traffic zones.
+    
+    Safety Theory:
+        Based on kinetic energy (E = 1/2mv²). Higher speeds exponentially 
+        increase braking distance and impact force.
+
+    Args:
+        speed_kmh: The current instantaneous speed of the vehicle.
+        zone: The operational environment ('highway', 'urban', 'school').
+
+    Returns:
+        A dictionary representation of the SafetyFlag object.
+        
+    Raises:
+        ValueError: If speed_kmh is a negative value.
     """
-    Detects overspeeding based on zone type.
-    
-    speed_kmh — current vehicle speed in km/h
-    zone      — 'highway', 'urban', 'school'
-    
-    Returns dict with flag status and severity.
-    
-    One function. One job:
-    Check if speed exceeds zone threshold.
-    """
-    # Select correct threshold for zone
+    if speed_kmh < 0:
+        raise ValueError(f"Invalid speed: {speed_kmh}. Speed cannot be negative.")
+
     zone_limits = {
         'highway': THRESHOLDS['speed_highway_kmh'],
         'urban':   THRESHOLDS['speed_urban_kmh'],
         'school':  THRESHOLDS['speed_school_zone_kmh'],
     }
 
-    # Default to highway if zone unknown
-    limit = zone_limits.get(zone, THRESHOLDS['speed_highway_kmh'])
-
-    # How far over the limit?
+    limit = zone_limits.get(zone.lower(), THRESHOLDS['speed_highway_kmh'])
     excess = speed_kmh - limit
 
     if excess <= 0:
-        return {
-            'flag':     False,
-            'type':     'FLAG_OVERSPEED',
-            'severity': 'NONE',
-            'message':  f'Speed {speed_kmh} km/h within {zone} limit of {limit} km/h',
-            'excess_kmh': 0
-        }
+        severity, flagged = 'NONE', False
     elif excess <= 20:
-        severity = 'WARNING'
+        severity, flagged = 'WARNING', True
     elif excess <= 40:
-        severity = 'DANGER'
+        severity, flagged = 'DANGER', True
     else:
-        severity = 'CRITICAL'
+        severity, flagged = 'CRITICAL', True
 
-    return {
-        'flag':       True,
-        'type':       'FLAG_OVERSPEED',
-        'severity':   severity,
-        'message':    f'OVERSPEED: {speed_kmh} km/h in {zone} zone — '
-                      f'{excess:.1f} km/h over limit',
-        'excess_kmh': round(excess, 1)
-    }
+    msg = (f'OVERSPEED: {speed_kmh} km/h in {zone} zone — {excess:.1f} km/h over limit' 
+           if flagged else f'Normal speed: {speed_kmh} km/h')
 
-# ============================================
-# FLAG 2 — HARSH BRAKING
-# One function. One job.
-# Detects dangerous braking events
-# Source: AA Kenya defensive driving standards
-# Physics: deceleration = delta_v / delta_t
-# Skid marks appear above 0.5g deceleration
-# ============================================
+    result = SafetyFlag(
+        flag=flagged,
+        type='FLAG_OVERSPEED',
+        severity=severity,
+        message=msg,
+        meta_data={'excess_kmh': round(max(0, excess), 1), 'limit': limit}
+    )
+    
+    if flagged:
+        logging.warning(f"OVERSPEED EVENT: {msg}")
+        
+    return asdict(result)
 
-def flag_harsh_braking(speed_before_kmh, speed_after_kmh,
-                        brake_pressure, time_delta_s=1.0):
+
+def flag_harsh_braking(speed_before_kmh: float, 
+                       speed_after_kmh: float,
+                       brake_pressure: float, 
+                       time_delta_s: float = 1.0) -> Dict:
+    """Analyzes deceleration rates to identify emergency or aggressive braking.
+
+    Safety Theory:
+        AA Kenya Standards: Skid marks typically appear when deceleration 
+        exceeds 0.5g (~4.9 m/s²). Values above 7.0 m/s² indicate imminent 
+        collision-avoidance maneuvers.
+
+    Args:
+        speed_before_kmh: Speed at the start of the measurement window.
+        speed_after_kmh: Speed at the end of the measurement window.
+        brake_pressure: Normalized brake sensor input (Scale 0.0 - 10.0).
+        time_delta_s: The duration of the event in seconds.
+
+    Returns:
+        A dictionary including deceleration (m/s²) and skid_risk (bool).
     """
-    Detects harsh braking using physics.
+    if time_delta_s <= 0:
+        logging.error("Harsh Braking calculation failed: time_delta_s must be > 0")
+        return asdict(SafetyFlag(False, 'ERROR', 'NONE', "Invalid time delta", {}))
 
-    speed_before_kmh — speed at start of braking (km/h)
-    speed_after_kmh  — speed after time_delta_s (km/h)
-    brake_pressure   — brake sensor reading (0-10 scale)
-    time_delta_s     — time between readings (seconds)
+    v1, v2 = speed_before_kmh / 3.6, speed_after_kmh / 3.6
+    deceleration = (v1 - v2) / time_delta_s
 
-    One function. One job:
-    Check if deceleration exceeds safe threshold.
-
-    Physics: deceleration = (v_before - v_after) / time
-    Unit conversion: km/h to m/s = divide by 3.6
-    """
-    # Convert speeds to m/s — Newton's laws work in SI units
-    v_before = speed_before_kmh / 3.6
-    v_after  = speed_after_kmh  / 3.6
-
-    # Calculate deceleration — delta_v / delta_t
-    # Your F=ma from B.Tech — a = (v2-v1)/t
-    deceleration = (v_before - v_after) / time_delta_s
-
-    # Negative deceleration = acceleration — not braking
-    if deceleration <= 0:
-        return {
-            'flag':          False,
-            'type':          'FLAG_HARSH_BRAKING',
-            'severity':      'NONE',
-            'decel_ms2':     round(deceleration, 2),
-            'message':       'No braking detected'
-        }
-
-    # Determine severity
-    # 0-3.5 m/s²  — normal braking — passengers comfortable
-    # 3.5-5.0     — harsh — passengers feel it — WARNING
-    # 5.0-7.0     — dangerous — skid risk — DANGER
-    # 7.0+        — critical — skid marks — CRITICAL
     if deceleration < THRESHOLDS['decel_harsh']:
-        severity = 'NONE'
-        flagged  = False
+        severity, flagged = 'NONE', False
     elif deceleration < 5.0:
-        severity = 'WARNING'
-        flagged  = True
+        severity, flagged = 'WARNING', True
     elif deceleration < 7.0:
-        severity = 'DANGER'
-        flagged  = True
+        severity, flagged = 'DANGER', True
     else:
-        severity = 'CRITICAL'
-        flagged  = True
+        severity, flagged = 'CRITICAL', True
 
-    # Skid mark indicator — brake pressure + high deceleration
-    skid_risk = brake_pressure >= THRESHOLDS['brake_spike'] \
-                and deceleration >= 5.0
+    skid_risk = bool(brake_pressure >= THRESHOLDS['brake_spike'] and deceleration >= 5.0)
 
-    return {
-        'flag':          flagged,
-        'type':          'FLAG_HARSH_BRAKING',
-        'severity':      severity,
-        'decel_ms2':     round(deceleration, 2),
-        'brake_pressure': brake_pressure,
-        'skid_risk':     skid_risk,
-        'message':       f'Deceleration: {deceleration:.2f} m/s² '
-                         f'({deceleration/9.81*100:.1f}% of g) — '
-                         f'Brake: {brake_pressure}/10 — '
-                         f'Skid risk: {skid_risk}'
-    }
+    result = SafetyFlag(
+        flag=flagged,
+        type='FLAG_HARSH_BRAKING',
+        severity=severity,
+        message=f'Decel: {deceleration:.2f} m/s² | Skid Risk: {skid_risk}',
+        meta_data={'decel_ms2': round(deceleration, 2), 'skid_risk': skid_risk}
+    )
+    
+    if flagged:
+        logging.warning(f"BRAKING EVENT: {result.message}")
+        
+    return asdict(result)
 
 
+def flag_distraction(steering_sequence: List[float], 
+                     time_window_s: float = 2.0) -> Dict:
+    """Detects cognitive distraction through erratic steering patterns.
 
-# ============================================
-# FLAG 3 — DRIVER DISTRACTION
-# One function. One job.
-# Detects distraction via steering inactivity
-# followed by sudden overcorrection
-#
-# Research basis:
-# NHTSA: 5 seconds eyes off road = danger
-# AAA: 2 seconds doubles crash risk
-# AA Kenya: phone unlock ~6 seconds
-#
-# Physics: Focused drivers make constant
-# micro-corrections — std dev > 0.3 degrees
-# Distracted drivers go unnaturally still
-# then overcorrect suddenly
-# ============================================
+    Safety Theory:
+        Focused drivers perform micro-corrections (entropy). Phone distraction 
+        results in "clamping" (low variance) followed by an over-correction 
+        "snap" when attention returns to the road.
 
-def flag_distraction(steering_sequence, time_window_s=2.0):
+    Args:
+        steering_sequence: Time-series of steering angles in degrees.
+        time_window_s: The duration of the window analyzed.
+
+    Returns:
+        Analysis of steering variance and corrective snap behavior.
     """
-    Detects driver distraction from steering pattern.
-    One function. One job.
-    """
-    if len(steering_sequence) < 3:
-        return {
-            'flag':     False,
-            'type':     'FLAG_DISTRACTION',
-            'severity': 'NONE',
-            'message':  'Insufficient data points'
-        }
+    if len(steering_sequence) < 4:
+        return asdict(SafetyFlag(False, 'FLAG_DISTRACTION', 'NONE', 'Insufficient data', {}))
 
     seq = np.array(steering_sequence)
-
-    # Split into early and late halves
     mid = len(seq) // 2
-    early_std    = np.std(seq[:mid])
-    late_change  = np.max(np.abs(np.diff(seq[mid:])))
+    
+    early_std = np.std(seq[:mid])
+    late_change = np.max(np.abs(np.diff(seq[mid:])))
+    total_variance = np.std(seq)
 
-    # Overall measures
-    variance     = np.std(seq)
-    max_change   = np.max(np.abs(np.diff(seq)))
-    steering_range = np.max(seq) - np.min(seq)
 
-    # Distraction signatures
-    still           = variance < THRESHOLDS['steering_still']
-    overcorrect     = max_change > THRESHOLDS['steering_overcorrect']
-    still_then_snap = (early_std < THRESHOLDS['steering_still'] and
-                       late_change > THRESHOLDS['steering_overcorrect'])
+    is_still = early_std < THRESHOLDS['steering_still']
+    is_snap = late_change > THRESHOLDS['steering_overcorrect']
 
-    # Classify — most severe first
-    if still_then_snap:
-        severity = 'CRITICAL'
-        flagged  = True
-        message  = (f'DISTRACTION CRITICAL: Still first half '
-                    f'(std={early_std:.3f}) then snapped '
-                    f'{late_change:.1f} degrees — phone use confirmed')
-    elif still and overcorrect:
-        severity = 'CRITICAL'
-        flagged  = True
-        message  = (f'DISTRACTION DETECTED: Still '
-                    f'(std={variance:.3f}) then overcorrected '
-                    f'({max_change:.1f} degrees)')
-    elif still:
-        severity = 'WARNING'
-        flagged  = True
-        message  = (f'DISTRACTION WARNING: Steering unnaturally '
-                    f'still (std={variance:.3f}) — possible phone use')
-    elif overcorrect:
-        severity = 'WARNING'
-        flagged  = True
-        message  = (f'OVERCORRECTION WARNING: Sudden steering '
-                    f'change of {max_change:.1f} degrees')
+    if is_still and is_snap:
+        severity, flagged = 'CRITICAL', True
+        msg = "DISTRACTION: Steering frozen then snapped back."
+    elif is_still:
+        severity, flagged = 'WARNING', True
+        msg = "DISTRACTION: Steering unnaturally still (likely phone use)."
+    elif is_snap:
+        severity, flagged = 'WARNING', True
+        msg = "OVERCORRECTION: Sudden steering adjustment detected."
     else:
-        severity = 'NONE'
-        flagged  = False
-        message  = (f'Normal steering — '
-                    f'std={variance:.3f}, '
-                    f'max change={max_change:.1f} degrees')
+        severity, flagged = 'NONE', False
+        msg = "Normal steering activity."
 
-    return {
-        'flag':           flagged,
-        'type':           'FLAG_DISTRACTION',
-        'severity':       severity,
-        'steering_std':   round(variance, 3),
-        'early_std':      round(early_std, 3),
-        'late_change':    round(late_change, 1),
-        'max_change_deg': round(max_change, 1),
-        'steering_range': round(steering_range, 1),
-        'time_window_s':  time_window_s,
-        'message':        message
-    }
+    result = SafetyFlag(
+        flag=flagged,
+        type='FLAG_DISTRACTION',
+        severity=severity,
+        message=msg,
+        meta_data={'std_dev': round(total_variance, 3), 'max_snap': round(late_change, 1)}
+    )
+    
+    if flagged:
+        logging.warning(f"DISTRACTION EVENT: {msg}")
+
+    return asdict(result)
+
+
+
+# Phase 3 — Lateral Dynamics & Grip Management
+
+# Add Phase 3 specific thresholds
+PHASE_3_THRESHOLDS = {
+    'lat_accel_warning': 3.0,   # m/s^2 - Passengers start to lean
+    'lat_accel_danger':  5.0,   # m/s^2 - Limit for high-center vehicles (SUVs)
+    'friction_limit_g':  0.8,   # Standard asphalt grip limit (~7.8 m/s^2)
+}
+
+# ============================================
+# FLAG 4 — AGGRESSIVE CORNERING
+# ============================================
+
+def flag_aggressive_cornering(speed_kmh: float, radius_m: float) -> Dict:
+    """Detects dangerous lateral forces during cornering.
+    
+    Safety Theory:
+        Centripetal force increases with the square of speed ($a_c = v^2 / r$). 
+        In Kenya, many rural roads have inconsistent camber (slopes), 
+        reducing the effective grip available for cornering.
+
+    Args:
+        speed_kmh: Current vehicle speed.
+        radius_m: The radius of the turn in meters (from GPS or Steering Map).
+
+    Returns:
+        A dictionary containing lateral acceleration and rollover risk.
+    """
+    if radius_m <= 0:
+        return asdict(SafetyFlag(False, 'FLAG_LATERAL', 'NONE', "Straight path", {}))
+
+    # Convert speed to m/s
+    v = speed_kmh / 3.6
+    
+    # Calculate Centripetal Acceleration: a = v^2 / r
+    lat_accel = (v**2) / radius_m
+
+    flagged = lat_accel > PHASE_3_THRESHOLDS['lat_accel_warning']
+    
+    if lat_accel < PHASE_3_THRESHOLDS['lat_accel_warning']:
+        severity = 'NONE'
+    elif lat_accel < PHASE_3_THRESHOLDS['lat_accel_danger']:
+        severity = 'WARNING'
+    else:
+        severity = 'DANGER'
+
+    msg = f"Lateral Force: {lat_accel:.2f} m/s² | "
+    msg += "High rollover risk for Matatus/SUVs" if lat_accel > 4.0 else "Stable"
+
+    result = SafetyFlag(
+        flag=flagged,
+        type='FLAG_AGGRESSIVE_CORNERING',
+        severity=severity,
+        message=msg,
+        meta_data={'lat_accel_ms2': round(lat_accel, 2), 'turn_radius_m': radius_m}
+    )
+
+    if flagged:
+        logging.warning(f"LATERAL EVENT: {msg}")
+
+    return asdict(result)
+
+# ============================================
+# FLAG 5 — FRICTION CIRCLE VIOLATION
+# ============================================
+
+def flag_grip_violation(lat_accel_ms2: float, long_accel_ms2: float) -> Dict:
+    """Detects if combined steering and braking exceeds physics limits.
+    
+    Safety Theory:
+        The Circle of Friction (Kamm's Circle) states that total grip 
+        is the vector sum of longitudinal (braking) and lateral (turning) 
+        forces. If $Total > Limit$, a skid is mathematically certain.
+
+    Args:
+        lat_accel_ms2: Measured lateral acceleration.
+        long_accel_ms2: Measured longitudinal acceleration (braking).
+
+    Returns:
+        Analysis of total grip utilization percentage.
+    """
+    # Total Vector Magnitude: sqrt(a_lat^2 + a_long^2)
+    total_grip_used = np.sqrt(lat_accel_ms2**2 + long_accel_ms2**2)
+    
+    # Convert friction limit g to m/s^2
+    limit = PHASE_3_THRESHOLDS['friction_limit_g'] * 9.81
+    utilization_pct = (total_grip_used / limit) * 100
+
+    flagged = utilization_pct > 80.0 # 80% is the safety buffer
+    
+    if utilization_pct < 80.0:
+        severity = 'NONE'
+    elif utilization_pct < 95.0:
+        severity = 'WARNING'
+    else:
+        severity = 'CRITICAL'
+
+    msg = f"Grip Utilization: {utilization_pct:.1f}% of available friction."
+
+    result = SafetyFlag(
+        flag=flagged,
+        type='FLAG_GRIP_VIOLATION',
+        severity=severity,
+        message=msg,
+        meta_data={'total_accel': round(total_grip_used, 2), 'utilization_pct': round(utilization_pct, 1)}
+    )
+
+    if flagged:
+        logging.error(f"FRICTION CIRCLE VIOLATION: {msg}")
+
+    return asdict(result)
+
+# ============================================
+# BRIDGE Framework Phase 3 — Lateral Dynamics
+# ============================================
+
+# 2024 Kenyan Road Dominator Library (Wheelbase in Meters)
+WHEELBASE_LIBRARY = {
+    'ISUZU_DMAX': 3.125,
+    'TOYOTA_HILUX': 3.085,
+    'TOYOTA_HIACE': 3.860,
+    'TOYOTA_LC300': 2.850,
+    'ISUZU_FRR': 4.800,
+    'TOYOTA_PROBOX': 2.550,
+    'TOYOTA_FIELDER': 2.600,
+    'MAZDA_DEMIO': 2.570,
+    'MITSUBISHI_FUSO': 4.800,
+    'TOYOTA_VITZ': 2.510,
+}
+
+@dataclass(frozen=True)
+class SafetyFlag:
+    """Immutable record for safety anomalies."""
+    flag: bool
+    type: str
+    severity: str
+    message: str
+    meta_data: Dict[str, Union[float, int, bool, str]]
+
+# ============================================
+# UTILITY: RADIUS CALCULATION
+# ============================================
+
+def get_turning_radius(steering_angle: float, vehicle_model: str) -> float:
+    r"""Calculates the geometric turning radius of a specific Kenyan vehicle.
+    
+    This function uses the Ackerman Steering model. It converts steering wheel 
+    input into a physical radius ($R = L / \sin(\delta)$).
+
+    Args:
+        steering_angle: Input from steering column in degrees.
+        vehicle_model: Key from WHEELBASE_LIBRARY.
+
+    Returns:
+        float: Radius in meters. Returns float('inf') for straight travel.
+    """
+    wheelbase = WHEELBASE_LIBRARY.get(vehicle_model.upper(), 2.8) # Default to 2.8m
+    # steering_ratio = 16.5  # Standard for most modern power steering systems
+    steering_ratio = 16.0  # Adjusted for Kenyan vehicles with less assist
+
+    # Defensive check for straight-line travel (prevent division by zero)
+    if abs(steering_angle) < 1.0:
+        return float('inf')
+
+    # Convert steering wheel degrees to wheel-at-road radians
+    tire_angle_rad = np.radians(steering_angle / steering_ratio)
+    
+    # Physics: R = L / sin(theta)
+    radius = wheelbase / np.sin(tire_angle_rad)
+    return abs(radius)
+
+# ============================================
+# FLAG 6 — LATERAL G-FORCE (ROLLOVER RISK)
+# ============================================
+
+def flag_lateral_force(speed_kmh: float, 
+                       steering_angle: float, 
+                       vehicle_model: str = 'TOYOTA_HIACE') -> Dict:
+    """Evaluates the risk of sliding or rolling over in a turn.
+    
+    Safety Theory:
+        Centripetal acceleration ($a_c = v^2/r$) is the primary cause of 
+        matatu/truck rollovers on highway bends. 
+        Critical threshold for high-roof vehicles is ~0.45g (4.4 m/s²).
+
+    Args:
+        speed_kmh: Instantaneous speed.
+        steering_angle: Steering wheel input in degrees.
+        vehicle_model: The specific vehicle type to pull wheelbase data.
+
+    Returns:
+        Dict: Safety flag status with lateral acceleration in m/s².
+    """
+    # 1. Input Validation (Defensive Programming)
+    if speed_kmh < 0:
+        return asdict(SafetyFlag(False, 'ERROR', 'NONE', "Speed cannot be negative", {}))
+
+    # 2. Derive Physics Properties
+    radius = get_turning_radius(steering_angle, vehicle_model)
+    v_ms = speed_kmh / 3.6
+    
+    # 3. Calculate Centripetal Acceleration
+    if radius == float('inf') or v_ms == 0:
+        lat_accel = 0.0
+    else:
+        lat_accel = (v_ms**2) / radius
+
+    # 4. Severity Mapping (Grounded in AA Kenya defensive standards)
+    # 0.0-3.0: Normal; 3.0-4.5: Warning (Leaning); 4.5+: Danger (Slide/Roll)
+    if lat_accel < 3.0:
+        severity, flagged = 'NONE', False
+    elif lat_accel < 4.5:
+        severity, flagged = 'WARNING', True
+    else:
+        severity, flagged = 'DANGER', True
+
+    msg = f"Lat Accel: {lat_accel:.2f} m/s² ({vehicle_model})"
+    if lat_accel > 4.5:
+        msg += " — CRITICAL ROLLOVER RISK"
+
+    return asdict(SafetyFlag(
+        flag=flagged,
+        type='FLAG_LATERAL_FORCE',
+        severity=severity,
+        message=msg,
+        meta_data={'lat_accel': round(lat_accel, 2), 'radius': round(radius, 1)}
+    ))
+
+# ============================================
+# FLAG 7 — KAMM'S CIRCLE (THE FRICTION LIMIT)
+# ============================================
+
+def flag_friction_circle(speed_kmh: float, 
+                         steering_angle: float, 
+                         long_accel_ms2: float,
+                         vehicle_model: str) -> Dict:
+    """Calculates the total load on the tires (Combined Loading).
+    
+    Safety Theory:
+        Combines braking/acceleration and cornering. A driver might 
+        safely brake at 4 m/s² or turn at 4 m/s², but doing both 
+        simultaneously creates a vector of 5.6 m/s², which may exceed 
+        road friction (Kamm's Circle).
+
+    Args:
+        speed_kmh: Speed in km/h.
+        steering_angle: Steering angle in degrees.
+        long_accel_ms2: Longitudinal acceleration from braking/gas.
+        vehicle_model: Key from WHEELBASE_LIBRARY.
+
+    Returns:
+        Dict: Utilization of total available friction (%).
+    """
+    # Get lateral component
+    lat_result = flag_lateral_force(speed_kmh, steering_angle, vehicle_model)
+    a_lat = lat_result['meta_data'].get('lat_accel', 0.0)
+    
+    # Calculate Resultant Vector: sqrt(a_lat² + a_long²)
+    total_accel = np.sqrt(a_lat**2 + long_accel_ms2**2)
+    
+    # 8.0 m/s² is a safe limit for typical Kenyan tarmac (0.8g)
+    utilization_pct = (total_accel / 8.0) * 100
+    
+    flagged = utilization_pct > 85.0
+    severity = 'CRITICAL' if utilization_pct > 100.0 else ('WARNING' if flagged else 'NONE')
+
+    return asdict(SafetyFlag(
+        flag=flagged,
+        type='FLAG_FRICTION_CIRCLE',
+        severity=severity,
+        message=f"Total Grip Utilization: {utilization_pct:.1f}%",
+        meta_data={'vector_sum': round(total_accel, 2), 'utilization_pct': round(utilization_pct, 1)}
+    ))
 
 
 
 
 # ============================================
-# QUICK TEST — remove before production
+# QUICK TEST 
 # ============================================
 if __name__ == "__main__":
     
@@ -294,7 +518,6 @@ if __name__ == "__main__":
               f"{speed} km/h in {zone} zone")
         print(f"   {result['message']}")
 
-
     print("\n" + "="*55)
     print("   Safari-Safe-AI | Harsh Braking Flag Tests")
     print("="*55)
@@ -314,15 +537,15 @@ if __name__ == "__main__":
         print(f"\n{status} {result['severity']:<8} {scenario}")
         print(f"   {result['message']}")
 
-    
     print("\n" + "="*55)
     print("   Safari-Safe-AI | Distraction Flag Tests")
     print("="*55)
 
     distraction_tests = [
-        # Focused driver — constant micro corrections/More realistic corrections:
-        ([5.1, 6.8, 4.2, 7.1, 3.9, 6.5, 4.8, 7.2],
-        "Focused driver — highway"),
+        # Focused driver — constant micro corrections
+         ([5.1, 6.8, 4.2, 7.1, 3.9, 6.5, 4.8, 7.2],
+            "Focused driver — highway"),
+
         # Distracted — unnaturally still
         ([5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0, 5.0],
          "Distracted — phone unlock"),
@@ -338,12 +561,41 @@ if __name__ == "__main__":
         # Urban normal — more steering activity
         ([8.1, 12.3, 6.2, 15.1, 4.8, 9.3, 11.2, 7.4],
          "Normal urban — Nairobi CBD"),
-
     ]
-
 
     for sequence, scenario in distraction_tests:
         result = flag_distraction(sequence)
         status = "🚨" if result['flag'] else "✅"
         print(f"\n{status} {result['severity']:<8} {scenario}")
         print(f"   {result['message']}")
+
+
+    print("="*55 + "\n BRIDGE Phase 3 — Lateral Dynamics Validation\n" + "="*55)
+    
+    # Scenario: Toyota Hiace Matatu taking a highway bend at 80km/h with 15deg steering
+    print("\nScenario 1: Hiace Matatu Highway Bend")
+    hiace_turn = flag_lateral_force(80, 15, 'TOYOTA_HIACE')
+    print(f"Result: {hiace_turn['message']} (Severity: {hiace_turn['severity']})")
+
+    # Scenario: Isuzu D-Max braking while cornering (Emergency Swerve)
+    print("\nScenario 2: D-Max Emergency Swerve (Braking + Turning)")
+    dmax_evasion = flag_friction_circle(60, 30, 4.5, 'ISUZU_DMAX')
+    print(f"Result: {dmax_evasion['message']} (Severity: {dmax_evasion['severity']})")
+
+    # More realistic highway bend scenario
+    print("\nScenario 1b: Hiace Matatu Sharp Bend 90km/h")
+    hiace_sharp = flag_lateral_force(90, 25, 'TOYOTA_HIACE')
+    print(f"Result: {hiace_sharp['message']} (Severity: {hiace_sharp['severity']})")
+
+    # Replace 15 degrees with realistic bend scenarios
+    print("\nScenario 1: Hiace — gentle lane change (15 deg)")
+    print(f"{flag_lateral_force(80, 15, 'TOYOTA_HIACE')['message']}")
+
+    print("\nScenario 2: Hiace — rural sharp bend (60 deg)")
+    print(f"{flag_lateral_force(80, 60, 'TOYOTA_HIACE')['message']}")
+
+    print("\nScenario 3: Hiace — emergency swerve (90 deg)")
+    print(f"{flag_lateral_force(80, 90, 'TOYOTA_HIACE')['message']}")
+
+    print("\nScenario 4: Hiace — tight junction (120 deg)")
+    print(f"{flag_lateral_force(60, 120, 'TOYOTA_HIACE')['message']}")
