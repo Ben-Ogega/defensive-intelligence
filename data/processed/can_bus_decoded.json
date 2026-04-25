@@ -1,0 +1,94 @@
+[
+    {
+        "timestamp": "2026-04-23 08:00:00.000",
+        "pgn": 65265,
+        "decoded": {
+            "pgn": 65265,
+            "name": "Cruise Control/Vehicle Speed",
+            "signals": {
+                "wheel_speed": {
+                    "raw": 16384,
+                    "value": 64.0,
+                    "unit": "km/h",
+                    "sensor_vector": "speed"
+                },
+                "brake_switch": {
+                    "raw": 0,
+                    "value": 0,
+                    "unit": "binary",
+                    "sensor_vector": "brake_pressure"
+                }
+            }
+        }
+    },
+    {
+        "timestamp": "2026-04-23 08:00:00.100",
+        "pgn": 65265,
+        "decoded": {
+            "pgn": 65265,
+            "name": "Cruise Control/Vehicle Speed",
+            "signals": {
+                "wheel_speed": {
+                    "raw": 6784,
+                    "value": 26.5,
+                    "unit": "km/h",
+                    "sensor_vector": "speed"
+                },
+                "brake_switch": {
+                    "raw": 0,
+                    "value": 0,
+                    "unit": "binary",
+                    "sensor_vector": "brake_pressure"
+                }
+            }
+        }
+    },
+    {
+        "timestamp": "2026-04-23 08:00:00.200",
+        "pgn": 61441,
+        "decoded": {
+            "pgn": 61441,
+            "name": "Electronic Brake Controller",
+            "signals": {
+                "brake_demand": {
+                    "raw": 200,
+                    "value": 80.0,
+                    "unit": "percent",
+                    "sensor_vector": "brake_pressure"
+                }
+            }
+        }
+    },
+    {
+        "timestamp": "2026-04-23 08:00:00.300",
+        "pgn": 61449,
+        "decoded": {
+            "pgn": 61449,
+            "name": "Vehicle Dynamic Stability Control",
+            "signals": {
+                "steering_angle": {
+                    "raw": 20480,
+                    "value": -90.0,
+                    "unit": "degrees",
+                    "sensor_vector": "steering_angle"
+                }
+            }
+        }
+    },
+    {
+        "timestamp": "2026-04-23 08:00:00.400",
+        "pgn": 61449,
+        "decoded": {
+            "pgn": 61449,
+            "name": "Vehicle Dynamic Stability Control",
+            "signals": {
+                "steering_angle": {
+                    "raw": 6144,
+                    "value": -202.0,
+                    "unit": "degrees",
+                    "sensor_vector": "steering_angle"
+                }
+            }
+        }
+    }
+]
