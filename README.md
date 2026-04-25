@@ -28,7 +28,7 @@ Anomaly Detection on Kenyan Road Networks"
 - [x] Week  1 — Sensor vector design & cosine similarity
 - [x] Phase 1 — File organizer — 862 files sorted
 - [x] Phase 1 — PartsBridge — 5 parts cross-referenced
-- [ ] Phase 1 — J1939 CAN Bus Parser (Thursday)
+- [✅] Phase 1 — J1939 CAN Bus Parser (Thursday)
 - [ ] Phase 2 — Data pipeline & Fleet Optimizer
 - [ ] Phase 3 — NumPy & Math foundations
 - [ ] Phase 4 — Neural network from scratch
