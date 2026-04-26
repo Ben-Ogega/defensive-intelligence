@@ -490,7 +490,87 @@ def flag_friction_circle(speed_kmh: float,
     ))
 
 
+# ============================================
+# FLAG 8 — TAILGATING / TIME TO COLLISION
+# One function. One job.
+# Detects dangerous following distance
+#
+# Research basis:
+# Highway Code: 2-second rule minimum
+# AA Kenya: 3-second rule recommended
+# Physics: TTC = gap / relative_speed
+# ============================================
 
+def flag_tailgating(speed_kmh, lead_speed_kmh,
+                    gap_m, vehicle_model='TOYOTA_HIACE'):
+    """
+    Detects dangerous following distance using
+    Time-to-Collision (TTC) physics.
+
+    speed_kmh      — your vehicle speed
+    lead_speed_kmh — lead vehicle speed
+    gap_m          — current gap in metres
+
+    One function. One job:
+    Calculate TTC and flag if below safe threshold.
+
+    Physics: TTC = gap / relative_speed
+    AA Kenya standard: 3 seconds minimum
+    """
+    # Convert to m/s
+    v_ego  = speed_kmh / 3.6
+    v_lead = lead_speed_kmh / 3.6
+
+    # Relative speed — positive means closing
+    rel_speed = v_ego - v_lead
+
+    # Not closing — no tailgating risk
+    if rel_speed <= 0:
+        return {
+            'flag':     False,
+            'type':     'FLAG_TAILGATING',
+            'severity': 'NONE',
+            'ttc_s':    float('inf'),
+            'gap_m':    gap_m,
+            'message':  f'Gap {gap_m:.1f}m — not closing on lead vehicle'
+        }
+
+    # Calculate TTC
+    ttc = gap_m / rel_speed
+
+    # Severity — AA Kenya 3-second rule
+    # Default values — safety net
+    severity = 'NONE'
+    flagged  = False
+# Severity — AA Kenya 3-second rule
+    if ttc > 3.5:
+        return {
+            'flag':         False,
+            'type':         'FLAG_TAILGATING',
+            'severity':     'NONE',
+            'ttc_s':        round(ttc, 2),
+            'gap_m':        round(gap_m, 1),
+            'rel_speed_ms': round(rel_speed, 2),
+            'message':      f'TTC: {ttc:.2f}s — Gap: {gap_m:.1f}m — '
+                            f'Closing at {rel_speed*3.6:.1f} km/h'
+        }
+    elif ttc > 2.5:
+        severity = 'WARNING'
+    elif ttc > 1.0:
+        severity = 'DANGER'
+    else:
+        severity = 'CRITICAL'
+
+    return {
+        'flag':         True,
+        'type':         'FLAG_TAILGATING',
+        'severity':     severity,
+        'ttc_s':        round(ttc, 2),
+        'gap_m':        round(gap_m, 1),
+        'rel_speed_ms': round(rel_speed, 2),
+        'message':      f'TTC: {ttc:.2f}s — Gap: {gap_m:.1f}m — '
+                        f'Closing at {rel_speed*3.6:.1f} km/h'
+    }
 
 # ============================================
 # QUICK TEST 
@@ -599,3 +679,24 @@ if __name__ == "__main__":
 
     print("\nScenario 4: Hiace — tight junction (120 deg)")
     print(f"{flag_lateral_force(60, 120, 'TOYOTA_HIACE')['message']}")
+
+
+    print("\n" + "="*55)
+    print("   Safari-Safe-AI | Tailgating Flag Tests")
+    print("="*55)
+
+    tailgate_tests = [
+        # (your_speed, lead_speed, gap, scenario)
+        (88, 70, 50.0, "Safe following — Thika Road"),
+        (88, 70, 21.8, "Warning zone — t=5 from notebook"),
+        (88, 70, 15.7, "Danger — t=6 from notebook"),
+        (88, 70,  9.3, "Critical — near collision"),
+        (60, 70, 15.0, "Safe — braking, not closing"),
+    ]
+
+    for ego, lead, gap, scenario in tailgate_tests:
+        result = flag_tailgating(ego, lead, gap)
+        status = "🚨" if result['flag'] else "✅"
+        print(f"\n{status} {result['severity']:<8} {scenario}")
+        print(f"   {result['message']}")
+
