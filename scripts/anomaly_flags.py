@@ -700,3 +700,5 @@ if __name__ == "__main__":
         print(f"\n{status} {result['severity']:<8} {scenario}")
         print(f"   {result['message']}")
 
+    
+

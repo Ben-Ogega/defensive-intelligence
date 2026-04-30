@@ -8,17 +8,20 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from anomaly_flags import (
-    flag_overspeed,
-    flag_harsh_braking,
-    flag_distraction,
-    flag_aggressive_cornering,
-    flag_grip_violation,
-    flag_lateral_force,
-    flag_friction_circle,
-    THRESHOLDS
-)
-
+try:
+    from anomaly_flags import (
+        flag_overspeed,
+        flag_harsh_braking,
+        flag_distraction,
+        flag_aggressive_cornering,
+        flag_grip_violation,
+        flag_lateral_force,
+        flag_friction_circle,
+        SEVERITY_SCORE
+    )
+except ImportError:
+    # Defensive fallback for severity scores if not found in anomaly_flags
+    SEVERITY_SCORE = {'NONE': 0, 'WARNING': 1, 'DANGER': 2, 'CRITICAL': 3}
 # ============================================
 # Safari-Safe-AI | Unified Safety Report
 # Author: Ben Ogega | BRIDGE Framework

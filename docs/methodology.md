@@ -98,8 +98,3 @@ Attention weight matrix (4-timestep sequence):
 Peak attention: t=3 — dangerous braking event.
 Result confirms bridge hypothesis.
 
----
-
-*This document feeds directly into Section 4
-(Methodology) of the IEK conference paper.*
-*Safari Park Hotel, Nairobi — November 23-29, 2026*
